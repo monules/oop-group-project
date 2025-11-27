@@ -5,9 +5,9 @@ import random
 
 ### Base classes ###
 ### employee is the player & associated attributes, contract is the main quest, task is like side-quest to up xp & gain skills ###
-### some getter & setter methods are missing ###
+### some getter & setter methods might be missing ###
 
-### list of skills in the game :
+### list of possible skills in the game :
 ## Organisation : reduce stress impact, reduce coffee consumption
 ## Adaptability : reduce stress impact
 ## Teamwork : increase motivation
@@ -37,104 +37,97 @@ class Employee(ABC):
     def work_task(self,task):
         pass
     
-    # reduction/increase values being dependant on current levels adds an intelligent mechaanic
+    # reduction/increase values being dependant on current levels adds an intelligent mechanic
     @abstractmethod
-    def healing_break(self,player):
-        if player.stress_level <= 25:
+    def healing_break(self):
+        if self.stress_level <= 25:
             stress_reduction = 5
-        elif player.stres_level <= 50:
+        elif self.stress_level <= 50:
             stress_reduction = 10
-        elif player.stress_level <= 75:
+        elif self.stress_level <= 75:
             stress_reduction = 20
         else:
             stress_reduction = 25
         
-        if player.motivation_level <= 25:
+        if self.motivation_level <= 25:
             motivation_increase = 5
-        elif player.motivation_level <= 50:
+        elif self.motivation_level <= 50:
             motivation_increase = 10
-        elif player.motivation_level <= 75:
+        elif self.motivation_level <= 75:
             motivation_increase = 20
         else:
             motivation_increase = 25
         
-        if player.coffee_level <= 25:
+        if self.coffee_level <= 25:
             coffee_increase = 5
-        elif player.coffee_level <= 50:
+        elif self.coffee_level <= 50:
             coffee_increase = 10
-        elif player.coffee_level <= 75:
+        elif self.coffee_level <= 75:
             coffee_increase = 20
         else:
             coffee_increase = 25
         
-        self._stress_level = max(0, self._stress_level - stress_reduction)
-        self._motivation_level = min(100, self._motivation_level + motivation_increase)
-        self._coffee_level = min(100, self._coffee_level + coffee_increase)
+        self.stress_level = max(0,self.stress_level-stress_reduction)
+        self.motivation_level = min(100,self.motivation_level+motivation_increase)
+        self.coffee_level = min(100,self.coffee_level+coffee_increase)
 
-        return f"{self._name} took a healing break!\nCurrent Stress Level: {self._stress_level}\n Motivation Level: {self._motivation_level}\n Coffee Level: {self._coffee_level}"
+        return f"{self.name} took a healing break!\nFloStress Level: {self.stress_level}\nMotivation Level: {self.motivation_level}\nCoffee Level: {self.coffee_level}"
 
     # this method is for checking the player's current status at any time of the game 
-    # like xp, stress, motivation, coffee levels, acquired skills etc
     @abstractmethod
     def check_status(self):
-        status = f""" ------- PLAYER STATUS ------- \n
-        Employee Name: {self._name}\n
-        Role: {self._role}\n
-        Experience Points (XP): {self._xp}\n
-        Motivation Level: {self._motivation_level}\n
-        Stress Level: {self._stress_level}\n
-        Coffee Level: {self._coffee_level}\n
-        Skills: {', '.join(self._skills)}"""
+        status = f""" ------- PLAYER STATUS -------
+        \nEmployee Name: {self.name}\nRole: {self.role}\nExperience Points (XP): {self.xp}\nStress Level: {self.stress_level}\nMotivation Level: {self.motivation_level}\nCoffee Level: {self.coffee_level}\nSkills: {', '.join(self.skills)}"""
         return status
 
     ## getter and setter methods
     def get_name(self):
-        return self._name
+        return self.name
     
     def set_name(self, name):
-        self._name = name
+        self.name = name
     
     def get_role(self):
-        return self._role
+        return self.role
     
     def set_role(self, role):
-        self._role = role
+        self.role = role
     
     def get_xp(self):
-        return self._xp
+        return self.xp
     
     def set_xp(self, xp):
-        self._xp = xp
+        self.xp = xp
     
     def get_motivation_level(self):
-        return self._motivation_level
+        return self.motivation_level
     
     def set_motivation_level(self, level):
-        self._motivation_level = max(0, min(100, level))
+        self.motivation_level = max(0,min(100, level))
     
     def get_stress_level(self):
-        return self._stress_level
+        return self.stress_level
     
     def set_stress_level(self, level):
-        self._stress_level = max(0, min(100, level))
+        self.stress_level = max(0,min(100, level))
     
     def get_coffee_level(self):
-        return self._coffee_level
+        return self.coffee_level
     
     def set_coffee_level(self, level):
-        self._coffee_level = max(0, min(100, level))
+        self.coffee_level = max(0,min(100, level))
     
     def get_skills(self):
-        return self._skills.copy()
+        return self.skills.copy()
     
     def add_skill(self, skill):
-        if skill not in self._skills:
-            self._skills.append(skill)
+        if skill not in self.skills:
+            self.skills.append(skill)
             return f"Learned new skill: {skill}!"
         return "Skill already known."
 
     def __str__(self):
-        return f"{self._name} - {self._role} (XP: {self._xp})"
+        return f"{self.name} - {self.role} (XP: {self.xp})"
 
 
 class Contract(ABC):
@@ -151,31 +144,27 @@ class Contract(ABC):
 
     ## getter methods
     def get_name(self):
-        return self._name
-    
-    def get_description(self):
-        return self._description
+        return self.name
     
     def get_xp(self):
-        return self._xp
+        return self.xp
     
     def get_required_skills(self):
-        return self._required_skills.copy()
+        return self.required_skills.copy()
     
-    def get_stress_impact(self):
-        return self._stress_impact
+    def get_stress_tool(self):
+        return self.stress_tool
     
     def is_successful(self):
-        return self._success
+        return self.success
     
     def __str__(self):
-        return f"{self._name}: {self._description} (XP: {self._xp})"
+        return f"{self.name} XP: {self.xp}"
 
 
 class Task(ABC):
-    def __init__(self,name,description,xp,required_skills,stress_tool):
+    def __init__(self,name,xp,required_skills,stress_tool):
         self.name = name
-        self.description = description
         self.xp = xp
         self.required_skills = required_skills
         self.stress_tool = stress_tool
@@ -187,25 +176,19 @@ class Task(ABC):
 
     ## getter methods
     def get_name(self):
-        return self._name
+        return self.name
     
     def get_xp(self):
-        return self._xp
-    
-    def get_contractor(self):
-        return self._contractor
+        return self.xp
     
     def get_required_skills(self):
-        return self._required_skills.copy()
-    
-    def get_difficulty(self):
-        return self._difficulty
+        return self.required_skills.copy()
     
     def is_successful(self):
-        return self._success
+        return self.success
     
     def __str__(self):
-        return f"{self._name}: {self._description} (XP: {self._xp})"
+        return f"{self.name} XP: {self.xp}"
 
 
 ### Classes inheriting from Employee ###
@@ -215,8 +198,8 @@ class Intern(Employee):
     def __init__(self,name,role,xp,motivation_level,stress_level,coffee_level,skills):
         if skills is None:
             skills = []
-        super().__init__(name, "Intern", xp, motivation_level, stress_level, coffee_level, skills)
-        self._promotion_xp = 100
+        super().__init__(name,"Intern",xp,motivation_level,stress_level,coffee_level,skills)
+        self.promotion_xp = 100
 
     def work_contract(self,contract):
         return super().work_contract(contract)
@@ -255,7 +238,6 @@ class Manager(Employee):
 class President(Employee):
     def __init__(self,name,role,xp,motivation_level,stress_level,coffee_level,skills):
         super().__init__(name,role,xp,motivation_level,stress_level,coffee_level,skills)
-
 
 
 ### Classes inheriting from Contract ###
@@ -362,17 +344,32 @@ class GameController:
         self.player = None
         self.contracts = []
         self.tasks = []
-        self._initialize_content()
+        self.initialize_content()
     
-    def _initialize_content(self):
+    def initialize_content(self):
         self.contracts = []  # Load or define initial contracts
         self.tasks = []      # Load or define initial tasks
     
     def create_player(self, name):
-        self.player = Intern(f"{name}", "Intern", 0, 50, 20, 50, [])
+        self.player = Intern(f"{name}","Intern",0,50,20,50,[])
         return self.player
     
-    ## add a saving thing for the game pls
+    ## add the loading thing for the game pls
+    #def load_game(self, filepath):
+    #    pass
+
+    ## add the saving thing for the game pls
+    #def save_game(self, filepath):
+    #    pass
+
+    def is_game_victory(self):
+        return self.player.role == "President"
+    
+    def is_game_over(self):
+        if self.player.stress_level >= 100:
+            return "Game Over: Your stress level is over 100, you are burnout!"
+        if self.player.motivation_level <= 0:
+            return "Game Over: Your motivation level is 0, you are quitting!"
 
 
 ### Main game stuff ###
@@ -380,40 +377,57 @@ class GameController:
 def main():
     game = GameController()
 
-    print("Welcome to Corporate Battle Simulator!")
+    print("Welcome to Corporate Battle Simulator!\n")
     print("In this game, you will navigate the corporate world, taking on contracts and tasks to climb the corporate hierarchy.")
-    print("The goal is to reach the position of President of the company.")
-    print("Mind your stress, motivation, and coffee levels as you progress as they have an impact on bonus (or malus) you will get during your journey! :)")
-    player_name = input("Enter your employee name: ")
+    print("The goal is to reach the position of President of the company.\n")
+    print("Mind your stress, motivation, and coffee levels as you progress as they have an impact on bonus (or malus) you will get during your journey! :)\n")
+    
+    # if there is a saved game, possibility to load it, else start new game logic pls
+    player_name = input("Enter your employee name:\n")
     player = game.create_player(player_name)
-    print(f"Hello, {player.get_name()}! You are starting as an Intern.")
+    print(f"\nHello, {player.get_name()}! You are starting as an Intern.")
     
-    ## Menu stuff
-    print("\nWhat would you like to do?")
-    print("1. Take on a contract")
-    print("2. Take on a task")
-    print("3. Take a healing break")
-    print("4. View status")
-    print("5. Save and quit")
-    try:
-        choice = int(input("Enter the number of your choice: "))
-        if choice == 1:
-            pass
-        elif choice == 2:
-            pass
-        elif choice == 3:
-            heal = player.healing_break()
-            print(heal)
-        elif choice == 4:
-            status = player.check_status()
-            print(status)
-        elif choice == 5:
-            pass
-        else:
-            print("Invalid choice. Please try again.")
-    except ValueError:
-        print("Invalid input. Please enter a number.")
+    ## game loop
+    while True:
+        if game.is_game_victory():
+            print("\n------- VICTORY -------")
+            print("Congratulations! You have reached the position of President and won the game!")
+            break
+        
+        game_over_message = game.is_game_over()
+        if game_over_message:
+            print("\n------- GAME OVER -------")
+            print(game_over_message)
+            break
     
-
+        try:
+            print("\n------- MENU -------")
+            print("\nWhat would you like to do?")
+            print("1. Take on a contract")
+            print("2. Take on a task")
+            print("3. Take a healing break")
+            print("4. View status")
+            print("5. Save and quit")
+            try:
+                choice = int(input("\nEnter the number of your choice: \n"))
+                if choice == 1:
+                    pass
+                elif choice == 2:
+                    pass
+                elif choice == 3:
+                    heal = player.healing_break()
+                    print(heal)
+                elif choice == 4:
+                    status = player.check_status()
+                    print(status)
+                elif choice == 5:
+                    pass
+                else:
+                    print("Invalid choice. Please try again.")
+            except ValueError:
+                print("Invalid input. Please enter a number.")
+        except Exception as e:
+            print(f"An error occurred: {e}")
+    
 if __name__ == "__main__":
     main()
