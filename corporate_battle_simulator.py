@@ -71,12 +71,12 @@ class Employee(ABC):
         self.motivation_level = min(100,self.motivation_level+motivation_increase)
         self.coffee_level = min(100,self.coffee_level+coffee_increase)
 
-        return f"{self.name} took a healing break!\nFloStress Level: {self.stress_level}\nMotivation Level: {self.motivation_level}\nCoffee Level: {self.coffee_level}"
+        return f"\n{self.name} took a healing break!\nStress Level: {self.stress_level}\nMotivation Level: {self.motivation_level}\nCoffee Level: {self.coffee_level}"
 
     # this method is for checking the player's current status at any time of the game 
     @abstractmethod
     def check_status(self):
-        status = f""" ------- PLAYER STATUS -------
+        status = f"""\n------- PLAYER STATUS -------
         \nEmployee Name: {self.name}\nRole: {self.role}\nExperience Points (XP): {self.xp}\nStress Level: {self.stress_level}\nMotivation Level: {self.motivation_level}\nCoffee Level: {self.coffee_level}\nSkills: {', '.join(self.skills)}"""
         return status
 
@@ -367,9 +367,9 @@ class GameController:
     
     def is_game_over(self):
         if self.player.stress_level >= 100:
-            return "Game Over: Your stress level is over 100, you are burnout!"
+            return "Your stress level is over 100, you are burnout!"
         if self.player.motivation_level <= 0:
-            return "Game Over: Your motivation level is 0, you are quitting!"
+            return "Your motivation level is 0, you are quitting!"
 
 
 ### Main game stuff ###
@@ -377,27 +377,31 @@ class GameController:
 def main():
     game = GameController()
 
-    print("Welcome to Corporate Battle Simulator!\n")
-    print("In this game, you will navigate the corporate world, taking on contracts and tasks to climb the corporate hierarchy.")
+    print("\n=================================================")
+    print("Welcome to Corporate Battle Simulator!")
+    print("=================================================")
+    print("\nIn this game, you will navigate the corporate world, taking on contracts and tasks to climb the corporate hierarchy.")
     print("The goal is to reach the position of President of the company.\n")
     print("Mind your stress, motivation, and coffee levels as you progress as they have an impact on bonus (or malus) you will get during your journey! :)\n")
     
     # if there is a saved game, possibility to load it, else start new game logic pls
-    player_name = input("Enter your employee name:\n")
+    player_name = input("Enter your employee name: ")
     player = game.create_player(player_name)
-    print(f"\nHello, {player.get_name()}! You are starting as an Intern.")
+    print(f"\nHello, {player.get_name()}! You have been hired as an Intern at BattleCORP.")
     
     ## game loop
     while True:
         if game.is_game_victory():
-            print("\n------- VICTORY -------")
+            print("\n------- VICTORY -------\n")
             print("Congratulations! You have reached the position of President and won the game!")
+            print("\n------- VICTORY -------")
             break
         
         game_over_message = game.is_game_over()
         if game_over_message:
-            print("\n------- GAME OVER -------")
+            print("\n------- GAME OVER -------\n")
             print(game_over_message)
+            print("\n------- GAME OVER -------")
             break
     
         try:
@@ -409,7 +413,7 @@ def main():
             print("4. View status")
             print("5. Save and quit")
             try:
-                choice = int(input("\nEnter the number of your choice: \n"))
+                choice = int(input("\nEnter the number of your choice: "))
                 if choice == 1:
                     pass
                 elif choice == 2:
