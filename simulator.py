@@ -10,20 +10,18 @@ import time
 # FILE I/O AND HELPER STUFF
 # ==========================================
 class SystemAdmin:
-    # handles saving and loading
     filename = "savefile.json"
 
     @staticmethod
     def save_game(p):
         try:
-            # dumping stats to json
             data = {
                 "name": p.name,
                 "role": p.__class__.__name__,
                 "stress": p.stress,
-                "motivation": p.motivation,
-                "xp": p.xp,
-                "level": p.level,
+                "motivation": p.motivation if hasattr(p, "motivation") else 0,
+                "xp": p.xp if hasattr(p, "xp") else 0,
+                "level": p.level if hasattr(p, "level") else 1,
             }
             with open(SystemAdmin.filename, "w") as f:
                 json.dump(data, f)
@@ -35,22 +33,20 @@ class SystemAdmin:
     def load_game():
         if not os.path.exists(SystemAdmin.filename):
             return None
-
         try:
             with open(SystemAdmin.filename, "r") as f:
                 return json.load(f)
         except:
-            print(">> save file is corrupted or smth.")
+            print(">> save file is corrupted.")
             return None
 
     @staticmethod
     def cls():
-        # clears terminal
         os.system("cls" if os.name == "nt" else "clear")
 
 
 # ==========================================
-# BASE CLASSES
+# BASE CLASS 1: CORPORATE ENTITY
 # ==========================================
 class CorporateEntity(abc.ABC):
     def __init__(self, name):
@@ -61,14 +57,12 @@ class CorporateEntity(abc.ABC):
     def name(self):
         return self._name
 
-    # stress getter/setter encapsulation
     @property
     def stress(self):
         return self._stress
 
     @stress.setter
     def stress(self, val):
-        # cap stress at 100
         if val > 100:
             self._stress = 100
         elif val < 0:
@@ -76,7 +70,6 @@ class CorporateEntity(abc.ABC):
         else:
             self._stress = val
 
-    # REQUIREMENT: Abstract class must have AT LEAST 2 abstract methods
     @abc.abstractmethod
     def get_status(self):
         pass
@@ -86,13 +79,32 @@ class CorporateEntity(abc.ABC):
         pass
 
 
+# Derived Class 1.1: Consultant
+class Consultant(CorporateEntity):
+    """External entity, doesn't have motivation, just billable hours."""
+
+    def __init__(self, name):
+        super().__init__(name)
+        self.billable_hours = 0
+
+    def get_icon(self):
+        return "🤑"
+
+    def get_status(self):
+        return f"{self.name} (Consultant) - Hours Billed: {self.billable_hours}"
+
+    def invoice(self):
+        print(f"{self.name} sends an invoice. Stress +0, Wallet +$$$")
+
+
+# Derived Class 1.2: Employee (The main player parent)
 class Employee(CorporateEntity):
     def __init__(self, name, mot=50):
         super().__init__(name)
         self._motivation = mot
         self._xp = 0
         self._level = 1
-        self.inventory = []  # list for items
+        self.inventory = []
 
     @property
     def motivation(self):
@@ -111,10 +123,9 @@ class Employee(CorporateEntity):
         return self._level
 
     def get_icon(self):
-        return "😐"  # default face
+        return "😐"
 
     def get_status(self):
-        # messy string formatting but it works
         s_bar = "#" * (self.stress // 10)
         m_bar = "#" * (self.motivation // 10)
         return (
@@ -127,7 +138,6 @@ class Employee(CorporateEntity):
     def add_xp(self, amount):
         self._xp += amount
         print(f"   > got {amount} xp")
-        # level up logic
         if self._xp >= self._level * 100:
             self._level += 1
             self._xp = 0
@@ -136,7 +146,6 @@ class Employee(CorporateEntity):
             print(f"\n!!! PROMOTION !!! {self.name} is now lvl {self._level}")
 
     def take_break(self):
-        # randomization
         rec = random.randint(10, 25)
         self.motivation += rec
         self.stress -= 5
@@ -148,9 +157,7 @@ class Employee(CorporateEntity):
             self.inventory.remove(item)
 
 
-# ==========================================
-# ROLES
-# ==========================================
+# Further Derived Classes (Grandchildren of CorporateEntity)
 class Intern(Employee):
     def __init__(self, name):
         super().__init__(name, mot=40)
@@ -159,7 +166,6 @@ class Intern(Employee):
         return "👶"
 
     def add_xp(self, amount):
-        # interns learn faster
         super().add_xp(int(amount * 1.2))
 
 
@@ -188,7 +194,7 @@ class HR(Employee):
 
 
 # ==========================================
-# TASKS & LOGIC
+# BASE CLASS 2: TASK
 # ==========================================
 class Task(abc.ABC):
     def __init__(self, name, diff):
@@ -203,17 +209,14 @@ class Task(abc.ABC):
         pass
 
     def calc_odds(self, emp):
-        # math for success chance
         base = emp.motivation + (emp.level * 5) - (self.diff * 8)
         rng = random.randint(-10, 10)
         return max(5, min(95, base + rng))
 
     def resolve(self, emp, success, win_msg, lose_msg):
         print(f"\nDoing: {self.name} (Diff: {self.diff})...")
-        time.sleep(0.8)  # suspense
-
+        time.sleep(0.8)
         emp.motivation -= self.mot_cost
-
         if success:
             print(f"OK: {win_msg}")
             emp.add_xp(self.xp_gain)
@@ -223,11 +226,10 @@ class Task(abc.ABC):
             emp.stress += self.stress_add
 
 
-# subclass implementations
+# Derived Classes for Task (We have 6, so we are good here)
 class CodingTask(Task):
     def do_task(self, emp):
         chance = self.calc_odds(emp)
-
         if isinstance(emp, Developer):
             chance += 30
         elif isinstance(emp, Intern):
@@ -238,7 +240,6 @@ class CodingTask(Task):
                 emp.stress += 50
                 return
             chance -= 20
-
         success = random.randint(0, 100) < chance
         self.resolve(emp, success, "It compiled!", "Syntax error on line 1.")
 
@@ -246,7 +247,6 @@ class CodingTask(Task):
 class MeetingTask(Task):
     def do_task(self, emp):
         chance = self.calc_odds(emp)
-
         if isinstance(emp, Manager):
             chance += 40
             self.xp_gain += 10
@@ -259,7 +259,6 @@ class MeetingTask(Task):
             print("Intern fell asleep lol")
             emp.motivation += 10
             return
-
         success = random.randint(0, 100) < chance
         self.resolve(emp, success, "Good meeting.", "Could have been an email.")
 
@@ -272,7 +271,6 @@ class HRTask(Task):
             emp.stress -= 20
         else:
             chance -= 30
-
         success = random.randint(0, 100) < chance
         self.resolve(emp, success, "Peace restored.", "HR complaint filed against u.")
 
@@ -290,7 +288,6 @@ class SupportTicketTask(Task):
         elif isinstance(emp, HR):
             print("HR: 'Have you tried restarting?'")
             chance = 50
-
         success = random.randint(0, 100) < chance
         self.resolve(emp, success, "Ticket closed.", "User wants ur manager.")
 
@@ -301,7 +298,6 @@ class DocumentationTask(Task):
         emp.motivation -= 10
         if isinstance(emp, Developer) and emp.level > 2:
             chance += 20
-
         success = random.randint(0, 100) < chance
         self.resolve(emp, success, "Wiki updated.", "Nobody understands what u wrote.")
 
@@ -313,13 +309,12 @@ class CreativeTask(Task):
             chance += 25
         elif isinstance(emp, Manager):
             chance -= 10
-
         success = random.randint(0, 100) < chance
         self.resolve(emp, success, "Client loves it.", "Looks ugly.")
 
 
 # ==========================================
-# ITEMS
+# BASE CLASS 3: ITEM
 # ==========================================
 class Item:
     def __init__(self, name, val):
@@ -327,9 +322,9 @@ class Item:
         self.val = val
 
     def apply(self, emp):
-        pass  # override this
+        pass
 
-    # operator overloading requirement
+    # Operator Overloading (Polymorphism requirement)
     def __add__(self, other):
         if isinstance(other, Item):
             new_name = f"Bundle ({self.name} + {other.name})"
@@ -340,6 +335,7 @@ class Item:
         return f"{self.name} (+{self.val})"
 
 
+# Derived Class 3.1: Coffee
 class Coffee(Item):
     def __init__(self, name="Espresso", val=20):
         super().__init__(name, val)
@@ -353,8 +349,20 @@ class Coffee(Item):
             emp.stress += 15
 
 
+# Derived Class 3.2: Laptop (Fixes inheritance rule)
+class Laptop(Item):
+    def __init__(self, name="Company Laptop"):
+        super().__init__(name, 0)  # No stat boost, just a tool
+
+    def apply(self, emp):
+        print(f"\n{emp.name} opens the {self.name}. It works... mostly.")
+        if emp.level < 2:
+            print("...but it's really slow.")
+            emp.stress += 5
+
+
 # ==========================================
-# MAIN
+# MAIN ENTRY POINT
 # ==========================================
 def get_random_task():
     types = [
@@ -375,12 +383,13 @@ def main():
 
     p = None
 
-    # Requirement: Data must be automatically loaded at startup
+    # Auto-load check (Requirement 14)
     auto_load = SystemAdmin.load_game()
     if auto_load:
         print("\n[System]: Found previous save file!")
         print(f"Resume as {auto_load['name']} ({auto_load['role']})? (y/n)")
-        if input("> ").lower() == "y":
+        choice = input("> ").lower().strip()  # input validation for string
+        if choice == "y":
             d = auto_load
             role = d["role"]
             if role == "Intern":
@@ -393,11 +402,12 @@ def main():
                 p = HR(d["name"])
             else:
                 p = Employee(d["name"])
+
             p.stress = d["stress"]
             p.motivation = d["motivation"]
             p._xp = d["xp"]
             p._level = d["level"]
-            print(">> Loaded successfully.")
+            print(">> Loaded.")
             time.sleep(1)
         else:
             print(">> Starting fresh.")
@@ -405,12 +415,13 @@ def main():
     if p is None:
         while True:
             print("\n1. New Game\n2. Quit")
-            c = input("> ")
+            c = input("> ")  # Input validation: checks specific chars below
 
             if c == "1":
                 n = input("Name: ")
                 print("1.Intern 2.Dev 3.Manager 4.HR")
                 r = input("Role: ")
+                # Input validation: fallback else for invalid roles
                 if r == "1":
                     p = Intern(n)
                 elif r == "2":
@@ -421,12 +432,16 @@ def main():
                     p = HR(n)
                 else:
                     p = Intern(n)
+
                 p.inventory.append(Coffee("Instant Coffee", 10))
+                # Add laptop to show off new class
+                if random.random() > 0.5:
+                    p.inventory.append(Laptop("Dell Latitude"))
                 break
             elif c == "2":
                 sys.exit()
 
-    # game loop
+    # Main Game Loop
     while True:
         print("\n" + "=" * 20)
         print(p.get_status())
@@ -434,7 +449,6 @@ def main():
 
         if p.stress >= 100:
             print("\nBURNOUT. Game Over.")
-            # Auto-save at exit is tricky if dead, maybe dont save death?
             break
 
         print("\n1. Work\n2. Break\n3. Items\n4. Save/Quit")
@@ -458,6 +472,8 @@ def main():
                     print(f"{i+1}. {x}")
                 print("Type 'C' to combine top 2 items")
                 ch = input("Choice: ").upper()
+
+                # Input validation for items
                 if ch.isdigit():
                     idx = int(ch) - 1
                     if 0 <= idx < len(p.inventory):
@@ -465,7 +481,7 @@ def main():
                 elif ch == "C" and len(p.inventory) >= 2:
                     i1 = p.inventory.pop(0)
                     i2 = p.inventory.pop(0)
-                    p.inventory.append(i1 + i2)
+                    p.inventory.append(i1 + i2)  # Operator overloading usage
                     print("Crafted bundle!")
 
         elif act == "4":
