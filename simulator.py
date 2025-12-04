@@ -7,105 +7,96 @@ import time
 
 
 # ==========================================
-# 1. UTILITY CLASS (File I/O & Helpers)
+# FILE I/O AND HELPER STUFF
 # ==========================================
 class SystemAdmin:
-    """
-    Utility class for handling game state persistence and system operations.
-    Stateless helper.
-    """
-
-    SAVE_FILE = "corporate_save.json"
+    # handles saving and loading
+    filename = "savefile.json"
 
     @staticmethod
-    def save_game_state(player_obj):
-        """Saves player data to a JSON file."""
+    def save_game(p):
         try:
+            # dumping stats to json
             data = {
-                "name": player_obj.name,
-                "role": player_obj.__class__.__name__,
-                "stress": player_obj.stress,
-                "motivation": player_obj.motivation,
-                "xp": player_obj.xp,
-                "level": player_obj.level,
+                "name": p.name,
+                "role": p.__class__.__name__,
+                "stress": p.stress,
+                "motivation": p.motivation,
+                "xp": p.xp,
+                "level": p.level,
             }
-            with open(SystemAdmin.SAVE_FILE, "w") as f:
+            with open(SystemAdmin.filename, "w") as f:
                 json.dump(data, f)
-            print(f"\n[System]: Game saved successfully to {SystemAdmin.SAVE_FILE}.")
-        except IOError as e:
-            print(f"\n[Error]: Could not save game - {e}")
+            print("\n>> game saved. don't forget to push to git.")
+        except Exception as e:
+            print("err saving:", e)
 
     @staticmethod
-    def load_game_state():
-        """Loads player data from JSON file."""
-        if not os.path.exists(SystemAdmin.SAVE_FILE):
-            print("\n[System]: No save file found.")
+    def load_game():
+        if not os.path.exists(SystemAdmin.filename):
+            print(">> no save file found.")
             return None
 
         try:
-            with open(SystemAdmin.SAVE_FILE, "r") as f:
-                data = json.load(f)
-            return data
-        except (IOError, json.JSONDecodeError) as e:
-            print(f"\n[Error]: Corrupted save file - {e}")
+            with open(SystemAdmin.filename, "r") as f:
+                return json.load(f)
+        except:
+            print(">> save file is corrupted or smth.")
             return None
 
     @staticmethod
-    def clear_screen():
+    def cls():
+        # clears terminal
         os.system("cls" if os.name == "nt" else "clear")
 
 
 # ==========================================
-# 2. ABSTRACT BASE CLASS
+# BASE CLASSES
 # ==========================================
 class CorporateEntity(abc.ABC):
-    """
-    Abstract base class for all entities in the office (Employees, Bosses, etc).
-    """
-
     def __init__(self, name):
         self._name = name
-        self._stress = 0  # 0 to 100
+        self._stress = 0
 
     @property
     def name(self):
         return self._name
 
+    # stress getter/setter encapsulation
     @property
     def stress(self):
         return self._stress
 
     @stress.setter
-    def stress(self, value):
-        self._stress = max(0, min(100, value))  # Clamp between 0-100
+    def stress(self, val):
+        # cap stress at 100
+        if val > 100:
+            self._stress = 100
+        elif val < 0:
+            self._stress = 0
+        else:
+            self._stress = val
 
     @abc.abstractmethod
     def get_status(self):
         pass
 
 
-# ==========================================
-# 3. EMPLOYEE HIERARCHY
-# ==========================================
 class Employee(CorporateEntity):
-    """
-    Base class for the player characters.
-    """
-
-    def __init__(self, name, motivation=50):
+    def __init__(self, name, mot=50):
         super().__init__(name)
-        self._motivation = motivation  # 0 to 100
+        self._motivation = mot
         self._xp = 0
         self._level = 1
-        self.inventory = []
+        self.inventory = []  # list for items
 
     @property
     def motivation(self):
         return self._motivation
 
     @motivation.setter
-    def motivation(self, value):
-        self._motivation = max(0, min(100, value))
+    def motivation(self, val):
+        self._motivation = max(0, min(100, val))
 
     @property
     def xp(self):
@@ -116,35 +107,33 @@ class Employee(CorporateEntity):
         return self._level
 
     def get_status(self):
+        # messy string formatting but it works
+        s_bar = "#" * (self.stress // 10)
+        m_bar = "#" * (self.motivation // 10)
         return (
-            f"--- {self.name} (Lvl {self.level} {self.__class__.__name__}) ---\n"
-            f"Stress:     [{'#' * (self.stress // 10):<10}] {self.stress}/100\n"
-            f"Motivation: [{'#' * (self.motivation // 10):<10}] {self.motivation}/100\n"
-            f"XP: {self.xp}"
+            f"--- {self.name} ({self.__class__.__name__}) ---\n"
+            f"LVL: {self.level} | XP: {self.xp}\n"
+            f"Stress:     [{s_bar:<10}] {self.stress}\n"
+            f"Motivation: [{m_bar:<10}] {self.motivation}"
         )
 
-    def gain_xp(self, amount):
+    def add_xp(self, amount):
         self._xp += amount
-        print(f"   + {amount} XP gained!")
+        print(f"   > got {amount} xp")
+        # level up logic
         if self._xp >= self._level * 100:
-            self.level_up()
-
-    def level_up(self):
-        self._level += 1
-        self._xp = 0
-        self.motivation = 100
-        self.stress = 0
-        print(f"\n🎉 PROMOTION! {self.name} is now Level {self._level}! 🎉")
-        print("Motivation restored. Stress cleared.")
+            self._level += 1
+            self._xp = 0
+            self.motivation = 100
+            self.stress = 0
+            print(f"\n!!! PROMOTION !!! {self.name} is now lvl {self._level}")
 
     def take_break(self):
-        recovery = random.randint(10, 25)
-        self.motivation += recovery
+        # randomization
+        rec = random.randint(10, 25)
+        self.motivation += rec
         self.stress -= 5
-        print(f"\n{self.name} takes a break... Motivation +{recovery}, Stress -5.")
-
-    def is_burned_out(self):
-        return self.stress >= 100
+        print(f"\n{self.name} is scrolling tiktok... mot +{rec}, stress -5")
 
     def use_item(self, item):
         item.apply(self)
@@ -152,272 +141,204 @@ class Employee(CorporateEntity):
             self.inventory.remove(item)
 
 
+# ==========================================
+# ROLES
+# ==========================================
 class Intern(Employee):
-    """High stress gain, chaotic results."""
-
     def __init__(self, name):
-        super().__init__(name, motivation=40)
+        super().__init__(name, mot=40)
 
-    def gain_xp(self, amount):
-        # Interns learn fast (bonus XP)
-        super().gain_xp(int(amount * 1.2))
+    def add_xp(self, amount):
+        # interns learn faster
+        super().add_xp(int(amount * 1.2))
 
 
 class Manager(Employee):
-    """High authority, low coding skill."""
-
     def __init__(self, name):
-        super().__init__(name, motivation=60)
+        super().__init__(name, mot=60)
 
 
 class Developer(Employee):
-    """High coding skill, hates meetings."""
-
     def __init__(self, name):
-        super().__init__(name, motivation=50)
+        super().__init__(name, mot=50)
 
 
 class HR(Employee):
-    """Likes meetings, good at people tasks."""
-
     def __init__(self, name):
-        super().__init__(name, motivation=70)
+        super().__init__(name, mot=70)
 
 
 # ==========================================
-# 4. TASK / BATTLE SYSTEM HIERARCHY
+# TASKS & LOGIC
 # ==========================================
 class Task(abc.ABC):
-    """
-    Abstract base class for tasks (the 'Enemies' or 'Challenges').
-    """
-
-    def __init__(self, name, difficulty):
+    def __init__(self, name, diff):
         self.name = name
-        self.difficulty = difficulty  # 1-10
-        self.stress_gain = difficulty * 5
-        self.motivation_cost = difficulty * 3
-        self.xp_reward = difficulty * 15
+        self.diff = diff
+        self.stress_add = diff * 5
+        self.mot_cost = diff * 3
+        self.xp_gain = diff * 15
 
     @abc.abstractmethod
-    def perform(self, employee):
+    def do_task(self, emp):
         pass
 
-    def calculate_base_chance(self, employee):
-        # Base success formula: Motivation% + (Level * 5) - (Difficulty * 8)
-        chance = employee.motivation + (employee.level * 5) - (self.difficulty * 8)
-        # Random variance
-        chance += random.randint(-10, 10)
-        return max(5, min(95, chance))  # Clamp between 5% and 95%
+    def calc_odds(self, emp):
+        # math for success chance
+        base = emp.motivation + (emp.level * 5) - (self.diff * 8)
+        rng = random.randint(-10, 10)
+        return max(5, min(95, base + rng))
 
-    def apply_consequences(self, employee, success, success_msg, fail_msg):
-        print(f"\nAttempting: {self.name} (Diff: {self.difficulty})...")
-        time.sleep(1)
+    def resolve(self, emp, success, win_msg, lose_msg):
+        print(f"\nDoing: {self.name} (Diff: {self.diff})...")
+        time.sleep(0.8)  # suspense
 
-        employee.motivation -= self.motivation_cost
+        emp.motivation -= self.mot_cost
 
         if success:
-            print(f"✅ SUCCESS: {success_msg}")
-            employee.gain_xp(self.xp_reward)
-            employee.stress += self.stress_gain // 2  # Little stress even on success
+            print(f"OK: {win_msg}")
+            emp.add_xp(self.xp_gain)
+            emp.stress += self.stress_add // 2
         else:
-            print(f"❌ FAILURE: {fail_msg}")
-            employee.stress += self.stress_gain
-            print(f"   (Stress +{self.stress_gain})")
+            print(f"FAIL: {lose_msg}")
+            emp.stress += self.stress_add
 
 
-# --- Specific Task Types ---
-
-
+# subclass implementations
 class CodingTask(Task):
-    def perform(self, employee):
-        chance = self.calculate_base_chance(employee)
+    def do_task(self, emp):
+        chance = self.calc_odds(emp)
 
-        # Unique Logic
-        if isinstance(employee, Developer):
+        if isinstance(emp, Developer):
             chance += 30
-        elif isinstance(employee, Intern):
-            chance -= 10  # Bug risk
-        elif isinstance(employee, Manager):
-            # 2% chance to delete repo
+        elif isinstance(emp, Intern):
+            chance -= 10
+        elif isinstance(emp, Manager):
             if random.random() < 0.02:
-                print(
-                    "💀 CATASTROPHE: Manager accidentally deleted the main repository!"
-                )
-                employee.stress += 50
+                print("BRUH. Manager deleted the repo.")
+                emp.stress += 50
                 return
             chance -= 20
 
         success = random.randint(0, 100) < chance
-        self.apply_consequences(
-            employee,
-            success,
-            "Code compiled without errors! Git push successful.",
-            "Syntax Error on line 432. The build failed.",
-        )
+        self.resolve(emp, success, "It compiled!", "Syntax error on line 1.")
 
 
 class MeetingTask(Task):
-    def perform(self, employee):
-        chance = self.calculate_base_chance(employee)
+    def do_task(self, emp):
+        chance = self.calc_odds(emp)
 
-        if isinstance(employee, Manager):
+        if isinstance(emp, Manager):
             chance += 40
-            self.xp_reward += 10  # Managers love this
-        elif isinstance(employee, Developer):
-            employee.motivation -= 30  # Devs hate this
+            self.xp_gain += 10
+        elif isinstance(emp, Developer):
+            emp.motivation -= 30
             chance -= 10
-        elif isinstance(employee, HR):
+        elif isinstance(emp, HR):
             chance += 50
-        elif isinstance(employee, Intern):
-            print("😴 Intern fell asleep during the meeting...")
-            employee.motivation += 10  # Nap bonus
-            return  # No success or fail, just nap
+        elif isinstance(emp, Intern):
+            print("Intern fell asleep lol")
+            emp.motivation += 10
+            return
 
         success = random.randint(0, 100) < chance
-        self.apply_consequences(
-            employee,
-            success,
-            "Synergy achieved! Action items delegated.",
-            "This could have been an email. Everyone is annoyed.",
-        )
+        self.resolve(emp, success, "Good meeting.", "Could have been an email.")
 
 
 class HRTask(Task):
-    def perform(self, employee):
-        chance = self.calculate_base_chance(employee)
-
-        if isinstance(employee, HR):
+    def do_task(self, emp):
+        chance = self.calc_odds(emp)
+        if isinstance(emp, HR):
             chance = 90
-            stress_relief = 20
+            emp.stress -= 20
         else:
             chance -= 30
-            stress_relief = 0
 
         success = random.randint(0, 100) < chance
-
-        if success and isinstance(employee, HR):
-            employee.stress -= stress_relief
-            print(f"✨ HR Zen: Stress reduced by {stress_relief}.")
-
-        self.apply_consequences(
-            employee,
-            success,
-            "Conflict resolved. Peace restored.",
-            "You accidentally forwarded the complaint to the whole company.",
-        )
+        self.resolve(emp, success, "Peace restored.", "HR complaint filed against u.")
 
 
 class SupportTicketTask(Task):
-    def perform(self, employee):
-        chance = self.calculate_base_chance(employee)
-
-        if isinstance(employee, Intern):
-            print("😱 Intern is panicking over angry customer!")
-            employee.stress += 10
+    def do_task(self, emp):
+        chance = self.calc_odds(emp)
+        if isinstance(emp, Intern):
+            print("Intern is panicking!")
+            emp.stress += 10
             chance -= 20
-        elif isinstance(employee, Manager):
-            print("Manager delegates the ticket...")
-            chance += 10  # Delegation works usually
-        elif isinstance(employee, HR):
-            print("HR asks: 'Have you tried turning it off and on?'")
-            # Random wild success or fail
+        elif isinstance(emp, Manager):
+            print("Delegated it.")
+            chance += 10
+        elif isinstance(emp, HR):
+            print("HR: 'Have you tried restarting?'")
             chance = 50
 
         success = random.randint(0, 100) < chance
-        self.apply_consequences(
-            employee,
-            success,
-            "Ticket closed. User is mildly satisfied.",
-            "User is demanding to speak to your manager.",
-        )
+        self.resolve(emp, success, "Ticket closed.", "User wants ur manager.")
 
 
 class DocumentationTask(Task):
-    def perform(self, employee):
-        # Everybody hates documentation
-        chance = self.calculate_base_chance(employee)
-        employee.motivation -= 10
-
-        # Except Senior Devs (handled via high level Devs generically here)
-        if isinstance(employee, Developer) and employee.level > 2:
+    def do_task(self, emp):
+        chance = self.calc_odds(emp)
+        emp.motivation -= 10
+        if isinstance(emp, Developer) and emp.level > 2:
             chance += 20
-            print("Senior Dev grumbles but does it responsibly.")
 
         success = random.randint(0, 100) < chance
-        self.apply_consequences(
-            employee,
-            success,
-            "Docs updated. Wiki is readable.",
-            "You wrote 500 lines of gibberish.",
-        )
+        self.resolve(emp, success, "Wiki updated.", "Nobody understands what u wrote.")
 
 
 class CreativeTask(Task):
-    def perform(self, employee):
-        chance = self.calculate_base_chance(employee)
-
-        if isinstance(employee, Intern):
-            chance += 25  # Gen Z energy
-        elif isinstance(employee, Manager):
-            chance -= 10  # Thinks they are good, actually bad
-        elif isinstance(employee, HR):
-            # Irrelevant, neutral
-            pass
+    def do_task(self, emp):
+        chance = self.calc_odds(emp)
+        if isinstance(emp, Intern):
+            chance += 25
+        elif isinstance(emp, Manager):
+            chance -= 10
 
         success = random.randint(0, 100) < chance
-        self.apply_consequences(
-            employee,
-            success,
-            "Brilliant pitch! The client loves it.",
-            "The design looks like a 90s PowerPoint.",
-        )
+        self.resolve(emp, success, "Client loves it.", "Looks ugly.")
 
 
 # ==========================================
-# 5. ITEM SYSTEM (Operator Overloading)
+# ITEMS
 # ==========================================
 class Item:
-    def __init__(self, name, effect_value):
+    def __init__(self, name, val):
         self.name = name
-        self.effect_value = effect_value
+        self.val = val
 
-    def apply(self, employee):
-        raise NotImplementedError("Subclasses must implement apply")
+    def apply(self, emp):
+        pass  # override this
 
+    # operator overloading requirement
     def __add__(self, other):
-        """Operator Overloading: Combine two items into a Bundle."""
         if isinstance(other, Item):
-            new_name = f"Bundle of {self.name} & {other.name}"
-            new_effect = self.effect_value + other.effect_value
-            # Return a generic item representing the bundle
-            return Coffee(new_name, new_effect)  # Using Coffee class as generic wrapper
+            new_name = f"Bundle ({self.name} + {other.name})"
+            return Coffee(new_name, self.val + other.val)
         return None
 
     def __str__(self):
-        return f"{self.name} (Power: {self.effect_value})"
+        return f"{self.name} (+{self.val})"
 
 
 class Coffee(Item):
-    def __init__(self, name="Espresso", effect_value=20):
-        super().__init__(name, effect_value)
+    def __init__(self, name="Espresso", val=20):
+        super().__init__(name, val)
 
-    def apply(self, employee):
-        print(f"\n☕ {employee.name} consumes {self.name}!")
-        employee.motivation += self.effect_value
-        employee.stress -= self.effect_value // 2
-        print(f"   Motivation +{self.effect_value}, Stress -{self.effect_value // 2}")
-
-        if employee.motivation > 120:
-            print("   ⚠️ JITTERS! Too much coffee. Health/Focus crash.")
-            employee.stress += 15
+    def apply(self, emp):
+        print(f"\nDrinking {self.name}...")
+        emp.motivation += self.val
+        emp.stress -= self.val // 2
+        if emp.motivation > 120:
+            print("Too much caffeine -> crash imminent")
+            emp.stress += 15
 
 
 # ==========================================
-# 6. MAIN GAME LOOP
+# MAIN
 # ==========================================
-def create_random_task():
-    task_types = [
+def get_random_task():
+    types = [
         CodingTask,
         MeetingTask,
         HRTask,
@@ -425,152 +346,104 @@ def create_random_task():
         DocumentationTask,
         CreativeTask,
     ]
-    t_cls = random.choice(task_types)
-
-    # Generate fun names
-    adjectives = ["Urgent", "Legacy", "Pointless", "Critical", "Boring"]
-    nouns = [
-        "API Update",
-        "Sync",
-        "Paperwork",
-        "Client Complaint",
-        "Wiki Edit",
-        "Brainstorm",
-    ]
-
-    name = f"{random.choice(adjectives)} {random.choice(nouns)}"
-    difficulty = random.randint(1, 8)
-
-    return t_cls(name, difficulty)
+    t = random.choice(types)
+    return t(f"Task_{random.randint(100,999)}", random.randint(1, 8))
 
 
 def main():
-    SystemAdmin.clear_screen()
-    print("🏢 === CORPORATE BATTLE SIMULATOR === 🏢")
+    SystemAdmin.cls()
+    print("--- OFFICE RPG SIMULATOR ---")
 
-    player = None
+    p = None
 
-    # --- Menu ---
     while True:
-        print("\n1. New Game")
-        print("2. Load Game")
-        print("3. Exit")
-        choice = input("Select: ")
+        print("\n1. New Game\n2. Load\n3. Quit")
+        c = input("> ")
 
-        if choice == "1":
-            name = input("Enter Name: ")
-            print("Choose Class:\n1. Intern\n2. Developer\n3. Manager\n4. HR")
-            r_choice = input("Role: ")
-
-            if r_choice == "1":
-                player = Intern(name)
-            elif r_choice == "2":
-                player = Developer(name)
-            elif r_choice == "3":
-                player = Manager(name)
-            elif r_choice == "4":
-                player = HR(name)
+        if c == "1":
+            n = input("Name: ")
+            print("1.Intern 2.Dev 3.Manager 4.HR")
+            r = input("Role: ")
+            if r == "1":
+                p = Intern(n)
+            elif r == "2":
+                p = Developer(n)
+            elif r == "3":
+                p = Manager(n)
+            elif r == "4":
+                p = HR(n)
             else:
-                player = Intern(name)  # Default
-
-            # Starter Item
-            player.inventory.append(Coffee("Instant Coffee", 10))
+                p = Intern(n)
+            p.inventory.append(Coffee("Instant Coffee", 10))
             break
-
-        elif choice == "2":
-            data = SystemAdmin.load_game_state()
-            if data:
-                # Reconstruct object
-                p_cls_name = data["role"]
-                if p_cls_name == "Intern":
-                    player = Intern(data["name"])
-                elif p_cls_name == "Developer":
-                    player = Developer(data["name"])
-                elif p_cls_name == "Manager":
-                    player = Manager(data["name"])
-                elif p_cls_name == "HR":
-                    player = HR(data["name"])
+        elif c == "2":
+            d = SystemAdmin.load_game()
+            if d:
+                role = d["role"]
+                if role == "Intern":
+                    p = Intern(d["name"])
+                elif role == "Developer":
+                    p = Developer(d["name"])
+                elif role == "Manager":
+                    p = Manager(d["name"])
+                elif role == "HR":
+                    p = HR(d["name"])
                 else:
-                    player = Employee(data["name"])
-
-                player.stress = data["stress"]
-                player.motivation = data["motivation"]
-                player._xp = data["xp"]
-                player._level = data["level"]
-                player.inventory.append(Coffee("Saved Coffee", 15))  # Bonus for loading
-                print(f"Welcome back, {player.name}!")
+                    p = Employee(d["name"])
+                p.stress = d["stress"]
+                p.motivation = d["motivation"]
+                p._xp = d["xp"]
+                p._level = d["level"]
+                print("loaded save.")
                 break
-
-        elif choice == "3":
+        elif c == "3":
             sys.exit()
 
-    # --- Game Loop ---
+    # game loop
     while True:
-        print("\n" + "=" * 30)
-        print(player.get_status())
-        print("=" * 30)
+        print("\n" + "=" * 20)
+        print(p.get_status())
+        print("=" * 20)
 
-        if player.is_burned_out():
-            print("\n🔥 BURNOUT! You have collapsed from stress.")
-            print("GAME OVER.")
+        if p.stress >= 100:
+            print("\nBURNOUT. Game Over.")
             break
 
-        print("\nActions:")
-        print("1. Find Work (Start Task)")
-        print("2. Take a Break")
-        print("3. Inventory")
-        print("4. Save & Quit")
+        print("\n1. Work\n2. Break\n3. Items\n4. Save/Quit")
+        act = input(">> ")
 
-        action = input(">> ")
-
-        if action == "1":
-            task = create_random_task()
-            # Logic check: Can player perform?
-            if player.motivation < task.motivation_cost:
-                print("\n❌ Too unmotivated to work! Drink coffee or take a break.")
+        if act == "1":
+            t = get_random_task()
+            if p.motivation < t.mot_cost:
+                print("Too tired to work.")
                 continue
+            t.do_task(p)
 
-            # Polymorphic call
-            task.perform(player)
+        elif act == "2":
+            p.take_break()
 
-        elif action == "2":
-            player.take_break()
-
-        elif action == "3":
-            if not player.inventory:
-                print("\nEmpty Pockets.")
+        elif act == "3":
+            if not p.inventory:
+                print("No items.")
             else:
-                print("\nInventory:")
-                for i, item in enumerate(player.inventory):
-                    print(f"{i+1}. {item}")
-                print("C. Combine Items (Operator Overload Demo)")
-                print("B. Back")
+                for i, x in enumerate(p.inventory):
+                    print(f"{i+1}. {x}")
+                print("Type 'C' to combine top 2 items")
+                ch = input("Choice: ").upper()
+                if ch.isdigit():
+                    idx = int(ch) - 1
+                    if 0 <= idx < len(p.inventory):
+                        p.use_item(p.inventory[idx])
+                elif ch == "C" and len(p.inventory) >= 2:
+                    i1 = p.inventory.pop(0)
+                    i2 = p.inventory.pop(0)
+                    p.inventory.append(i1 + i2)
+                    print("Crafted bundle!")
 
-                inv_choice = input("Use item # or (C)ombine: ").upper()
-
-                if inv_choice.isdigit():
-                    idx = int(inv_choice) - 1
-                    if 0 <= idx < len(player.inventory):
-                        player.use_item(player.inventory[idx])
-
-                elif inv_choice == "C" and len(player.inventory) >= 2:
-                    # Demo of Operator Overloading
-                    item1 = player.inventory.pop(0)
-                    item2 = player.inventory.pop(0)
-                    combined = item1 + item2  # Uses __add__
-                    player.inventory.append(combined)
-                    print(f"\n✨ Crafted: {combined.name}!")
-
-        elif action == "4":
-            SystemAdmin.save_game_state(player)
-            print("Bye!")
+        elif act == "4":
+            SystemAdmin.save_game(p)
             break
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print("\nForce Quit.")
-    except Exception as e:
-        print(f"Critical System Failure: {e}")
+    main()
