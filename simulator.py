@@ -34,7 +34,6 @@ class SystemAdmin:
     @staticmethod
     def load_game():
         if not os.path.exists(SystemAdmin.filename):
-            print(">> no save file found.")
             return None
 
         try:
@@ -77,8 +76,13 @@ class CorporateEntity(abc.ABC):
         else:
             self._stress = val
 
+    # REQUIREMENT: Abstract class must have AT LEAST 2 abstract methods
     @abc.abstractmethod
     def get_status(self):
+        pass
+
+    @abc.abstractmethod
+    def get_icon(self):
         pass
 
 
@@ -106,12 +110,15 @@ class Employee(CorporateEntity):
     def level(self):
         return self._level
 
+    def get_icon(self):
+        return "😐"  # default face
+
     def get_status(self):
         # messy string formatting but it works
         s_bar = "#" * (self.stress // 10)
         m_bar = "#" * (self.motivation // 10)
         return (
-            f"--- {self.name} ({self.__class__.__name__}) ---\n"
+            f"--- {self.get_icon()} {self.name} ({self.__class__.__name__}) ---\n"
             f"LVL: {self.level} | XP: {self.xp}\n"
             f"Stress:     [{s_bar:<10}] {self.stress}\n"
             f"Motivation: [{m_bar:<10}] {self.motivation}"
@@ -148,6 +155,9 @@ class Intern(Employee):
     def __init__(self, name):
         super().__init__(name, mot=40)
 
+    def get_icon(self):
+        return "👶"
+
     def add_xp(self, amount):
         # interns learn faster
         super().add_xp(int(amount * 1.2))
@@ -157,15 +167,24 @@ class Manager(Employee):
     def __init__(self, name):
         super().__init__(name, mot=60)
 
+    def get_icon(self):
+        return "📅"
+
 
 class Developer(Employee):
     def __init__(self, name):
         super().__init__(name, mot=50)
 
+    def get_icon(self):
+        return "💻"
+
 
 class HR(Employee):
     def __init__(self, name):
         super().__init__(name, mot=70)
+
+    def get_icon(self):
+        return "📋"
 
 
 # ==========================================
@@ -356,48 +375,56 @@ def main():
 
     p = None
 
-    while True:
-        print("\n1. New Game\n2. Load\n3. Quit")
-        c = input("> ")
-
-        if c == "1":
-            n = input("Name: ")
-            print("1.Intern 2.Dev 3.Manager 4.HR")
-            r = input("Role: ")
-            if r == "1":
-                p = Intern(n)
-            elif r == "2":
-                p = Developer(n)
-            elif r == "3":
-                p = Manager(n)
-            elif r == "4":
-                p = HR(n)
+    # Requirement: Data must be automatically loaded at startup
+    auto_load = SystemAdmin.load_game()
+    if auto_load:
+        print("\n[System]: Found previous save file!")
+        print(f"Resume as {auto_load['name']} ({auto_load['role']})? (y/n)")
+        if input("> ").lower() == "y":
+            d = auto_load
+            role = d["role"]
+            if role == "Intern":
+                p = Intern(d["name"])
+            elif role == "Developer":
+                p = Developer(d["name"])
+            elif role == "Manager":
+                p = Manager(d["name"])
+            elif role == "HR":
+                p = HR(d["name"])
             else:
-                p = Intern(n)
-            p.inventory.append(Coffee("Instant Coffee", 10))
-            break
-        elif c == "2":
-            d = SystemAdmin.load_game()
-            if d:
-                role = d["role"]
-                if role == "Intern":
-                    p = Intern(d["name"])
-                elif role == "Developer":
-                    p = Developer(d["name"])
-                elif role == "Manager":
-                    p = Manager(d["name"])
-                elif role == "HR":
-                    p = HR(d["name"])
+                p = Employee(d["name"])
+            p.stress = d["stress"]
+            p.motivation = d["motivation"]
+            p._xp = d["xp"]
+            p._level = d["level"]
+            print(">> Loaded successfully.")
+            time.sleep(1)
+        else:
+            print(">> Starting fresh.")
+
+    if p is None:
+        while True:
+            print("\n1. New Game\n2. Quit")
+            c = input("> ")
+
+            if c == "1":
+                n = input("Name: ")
+                print("1.Intern 2.Dev 3.Manager 4.HR")
+                r = input("Role: ")
+                if r == "1":
+                    p = Intern(n)
+                elif r == "2":
+                    p = Developer(n)
+                elif r == "3":
+                    p = Manager(n)
+                elif r == "4":
+                    p = HR(n)
                 else:
-                    p = Employee(d["name"])
-                p.stress = d["stress"]
-                p.motivation = d["motivation"]
-                p._xp = d["xp"]
-                p._level = d["level"]
-                print("loaded save.")
+                    p = Intern(n)
+                p.inventory.append(Coffee("Instant Coffee", 10))
                 break
-        elif c == "3":
-            sys.exit()
+            elif c == "2":
+                sys.exit()
 
     # game loop
     while True:
@@ -407,6 +434,7 @@ def main():
 
         if p.stress >= 100:
             print("\nBURNOUT. Game Over.")
+            # Auto-save at exit is tricky if dead, maybe dont save death?
             break
 
         print("\n1. Work\n2. Break\n3. Items\n4. Save/Quit")
