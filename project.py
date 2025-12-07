@@ -374,7 +374,7 @@ class Laptop(Item):
 
 class Minigame():
     def play():
-        return
+        return None
     
 class Flappy_flap(Minigame):
 
@@ -406,10 +406,20 @@ class Flappy_flap(Minigame):
         cursor_position = 1 # Y position (line) of the player (0, 1, or 2)
         board = [[" " for i in range(Flappy_flap.SCREEN_WIDTH)] for j in range(Flappy_flap.SCREEN_HEIGHT)]
         score = 0
+        path_drawer_position = 0
         game_running = True
 
         while game_running:
-            
+            if score==100:
+                Flappy_flap.SCREEN_HEIGHT = 5
+                board.append(["I" for i in range(Flappy_flap.SCREEN_WIDTH)])
+                board.append(["I" for i in range(Flappy_flap.SCREEN_WIDTH)])
+            if score==300:
+                Flappy_flap.SCREEN_HEIGHT = 7
+                board.append(["I" for i in range(Flappy_flap.SCREEN_WIDTH)])
+                board.append(["I" for i in range(Flappy_flap.SCREEN_WIDTH)])
+
+
             # Input processing
             if keyboard.is_pressed('up'):
                 cursor_position = max(0, cursor_position - 1)
@@ -428,9 +438,23 @@ class Flappy_flap(Minigame):
                 board[i].append(" ")
 
             # New obstacles (on right side)
-            if random.randint(1, 4) == 1:
-                obstacle_line = random.randint(0, Flappy_flap.SCREEN_HEIGHT - 1)
-                board[obstacle_line][Flappy_flap.SCREEN_WIDTH - 1] = "I"
+            for i in range (Flappy_flap.SCREEN_HEIGHT):
+                board[i][Flappy_flap.SCREEN_WIDTH - 1] = "I"
+
+            board[path_drawer_position][Flappy_flap.SCREEN_WIDTH-1] = " "
+            if path_drawer_position == 0:
+                path_drawer_position += random.randint(0,1)
+            elif path_drawer_position == Flappy_flap.SCREEN_HEIGHT-1:
+                path_drawer_position += random.randint(-1,0)
+            else:
+                path_drawer_position += random.randint(-1,1)
+            print(path_drawer_position)
+            board[path_drawer_position][Flappy_flap.SCREEN_WIDTH-1] = " "
+            
+            
+            for i in range(Flappy_flap.SCREEN_HEIGHT):
+                if random.randint(1,100)>25:
+                    board[i][Flappy_flap.SCREEN_WIDTH-1] = " "
 
             # Game display
             Flappy_flap.draw_game(board, cursor_position, score, best_score)
@@ -449,15 +473,20 @@ class Flappy_flap(Minigame):
         time.sleep(2)
 
         if score > best_score and score >= 50:
-            number = random.randint(15, 30)
+            number = random.randint(15, 35)
             player.modify_motivation(number)
             player.modify_stress(-15)
             print(f"\nHigh new best score made {player.name} proud of himself! motivation +{number}, stress -15")
-        elif score >= 75:
+        elif score >= 75 and score <= 100:
             number = random.randint(10, 30)
             player.modify_motivation(number)
             player.modify_stress(-10)
             print(f"\nHigh score made {player.name} happy! motivation +{number}, stress -10")
+        elif score >= 100:
+            number = random.randint(12, 32)
+            player.modify_motivation(number)
+            player.modify_stress(-12)
+            print(f'\n"Wow! The bigger area levels are so fun!" motivation +{number}, stress -12')
         else:
             number = random.randint(10, 25)
             player.modify_motivation(number)
