@@ -5,6 +5,8 @@ import os
 import sys
 import time
 
+import keyboard # requires "keyboard" package
+
 
 # ==========================================
 # FILE I/O AND HELPER STUFF
@@ -22,10 +24,11 @@ class SystemAdmin:
                 "motivation": p.motivation if hasattr(p, "motivation") else 0,
                 "xp": p.xp if hasattr(p, "xp") else 0,
                 "level": p.level if hasattr(p, "level") else 1,
+                "flappy_flap_best_score": p.flappy_flap_best_score,
             }
             with open(SystemAdmin.filename, "w") as f:
                 json.dump(data, f)
-            print("\n>> game saved. don't forget to push to git.")
+            print("\n>> Game saved. don't forget to push to git.")
         except Exception as e:
             print("err saving:", e)
 
@@ -105,6 +108,7 @@ class Employee(CorporateEntity):
         self._xp = 0
         self._level = 1
         self.inventory = []
+        self.flappy_flap_best_score = 0
 
     @property
     def motivation(self):
@@ -145,6 +149,12 @@ class Employee(CorporateEntity):
             self.stress = 0
             print(f"\n!!! PROMOTION !!! {self.name} is now lvl {self._level}")
 
+    def modify_motivation(self, modifier):
+        self.motivation += modifier
+
+    def modify_stress(self, modifier):
+        self.stress += modifier
+    
     def take_break(self):
         rec = random.randint(10, 25)
         self.motivation += rec
@@ -361,6 +371,107 @@ class Laptop(Item):
             emp.stress += 5
 
 
+
+class Minigame():
+    def play():
+        return
+    
+class Flappy_flap(Minigame):
+
+
+    # Minigame parameters
+    SCREEN_HEIGHT = 3
+    SCREEN_WIDTH = 20
+    GAME_SPEED = 0.1 # Time between each frame (seconds)
+
+
+    def draw_game(board, player_position, score, best_score):
+        SystemAdmin.cls()        
+        
+        print(f"--- Flappy Flap | Score: {score} | Best score: {best_score} ---")
+        print("-------------------------------------------")
+        
+        for i in range(Flappy_flap.SCREEN_HEIGHT):
+            line_to_display = list(board[i])
+            
+            if i == player_position:
+                line_to_display[1] = "O"
+                
+            print("|" + "".join(line_to_display) + "|")
+            
+        print("-------------------------------------------")
+
+
+    def play(player, best_score = 0):
+        cursor_position = 1 # Y position (line) of the player (0, 1, or 2)
+        board = [[" " for i in range(Flappy_flap.SCREEN_WIDTH)] for j in range(Flappy_flap.SCREEN_HEIGHT)]
+        score = 0
+        game_running = True
+
+        while game_running:
+            
+            # Input processing
+            if keyboard.is_pressed('up'):
+                cursor_position = max(0, cursor_position - 1)
+            elif keyboard.is_pressed('down'):
+                cursor_position = min(Flappy_flap.SCREEN_HEIGHT - 1, cursor_position + 1)
+
+
+            # Collision test
+            if board[cursor_position][1] == "I":
+                game_running = False
+                break
+
+            # Obstacles movement (from right to left)
+            for i in range(Flappy_flap.SCREEN_HEIGHT):
+                board[i].pop(0) # Delete out of screen elements (on left side)
+                board[i].append(" ")
+
+            # New obstacles (on right side)
+            if random.randint(1, 4) == 1:
+                obstacle_line = random.randint(0, Flappy_flap.SCREEN_HEIGHT - 1)
+                board[obstacle_line][Flappy_flap.SCREEN_WIDTH - 1] = "I"
+
+            # Game display
+            Flappy_flap.draw_game(board, cursor_position, score, best_score)
+            
+            score += 1
+            if score>best_score:
+                best_score=score
+            time.sleep(Flappy_flap.GAME_SPEED)
+
+        # End game screen
+        SystemAdmin.cls()
+        print("***********************************")
+        print("             GAME OVER             ")
+        print(f"           Score final: {score}        ")
+        print("***********************************")
+        time.sleep(2)
+
+        if score > best_score and score >= 50:
+            number = random.randint(15, 30)
+            player.modify_motivation(number)
+            player.modify_stress(-15)
+            print(f"\nHigh new best score made {player.name} proud of himself! motivation +{number}, stress -15")
+        elif score >= 75:
+            number = random.randint(10, 30)
+            player.modify_motivation(number)
+            player.modify_stress(-10)
+            print(f"\nHigh score made {player.name} happy! motivation +{number}, stress -10")
+        else:
+            number = random.randint(10, 25)
+            player.modify_motivation(number)
+            player.modify_stress(-5)
+            print(f'\n"RAHHHH, the game is lagging!!" motivation +{number}, stress -5')
+
+
+        return best_score
+
+
+
+
+
+
 # ==========================================
 # MAIN ENTRY POINT
 # ==========================================
@@ -381,7 +492,7 @@ def main():
     SystemAdmin.cls()
     print("--- OFFICE RPG SIMULATOR ---")
 
-    p = None
+    player = None
 
     # Auto-load check (Requirement 14)
     auto_load = SystemAdmin.load_game()
@@ -390,64 +501,65 @@ def main():
         print(f"Resume as {auto_load['name']} ({auto_load['role']})? (y/n)")
         choice = input("> ").lower().strip()  # input validation for string
         if choice == "y":
-            d = auto_load
-            role = d["role"]
+            game_file = auto_load
+            role = game_file["role"]
             if role == "Intern":
-                p = Intern(d["name"])
+                player = Intern(game_file["name"])
             elif role == "Developer":
-                p = Developer(d["name"])
+                player = Developer(game_file["name"])
             elif role == "Manager":
-                p = Manager(d["name"])
+                player = Manager(game_file["name"])
             elif role == "HR":
-                p = HR(d["name"])
+                player = HR(game_file["name"])
             else:
-                p = Employee(d["name"])
+                player = Employee(game_file["name"])
 
-            p.stress = d["stress"]
-            p.motivation = d["motivation"]
-            p._xp = d["xp"]
-            p._level = d["level"]
+            player.stress = game_file["stress"]
+            player.motivation = game_file["motivation"]
+            player._xp = game_file["xp"]
+            player._level = game_file["level"]
+            player.flappy_flap_best_score = game_file["flappy_flap_best_score"]
             print(">> Loaded.")
             time.sleep(1)
         else:
             print(">> Starting fresh.")
 
-    if p is None:
+    if player is None:
         while True:
             print("\n1. New Game\n2. Quit")
-            c = input("> ")  # Input validation: checks specific chars below
+            choice = input("> ")  # Input validation: checks specific chars below
 
-            if c == "1":
-                n = input("Name: ")
+            if choice == "1":
+                player_name = input("Name: ")
                 print("1.Intern 2.Dev 3.Manager 4.HR")
-                r = input("Role: ")
+                role = input("Role: ")
                 # Input validation: fallback else for invalid roles
-                if r == "1":
-                    p = Intern(n)
-                elif r == "2":
-                    p = Developer(n)
-                elif r == "3":
-                    p = Manager(n)
-                elif r == "4":
-                    p = HR(n)
+                if role == "1":
+                    player = Intern(player_name)
+                elif role == "2":
+                    player = Developer(player_name)
+                elif role == "3":
+                    player = Manager(player_name)
+                elif role == "4":
+                    player = HR(player_name)
                 else:
-                    p = Intern(n)
+                    player = Intern(player_name)
 
-                p.inventory.append(Coffee("Instant Coffee", 10))
+                player.inventory.append(Coffee("Instant Coffee", 10))
                 # Add laptop to show off new class
                 if random.random() > 0.5:
-                    p.inventory.append(Laptop("Dell Latitude"))
+                    player.inventory.append(Laptop("Dell Latitude"))
                 break
-            elif c == "2":
+            elif choice == "2":
                 sys.exit()
 
     # Main Game Loop
     while True:
         print("\n" + "=" * 20)
-        print(p.get_status())
+        print(player.get_status())
         print("=" * 20)
 
-        if p.stress >= 100:
+        if player.stress >= 100:
             print("\nBURNOUT. Game Over.")
             break
 
@@ -456,36 +568,50 @@ def main():
 
         if act == "1":
             t = get_random_task()
-            if p.motivation < t.mot_cost:
+            if player.motivation < t.mot_cost:
                 print("Too tired to work.")
                 continue
-            t.do_task(p)
+            t.do_task(player)
 
         elif act == "2":
-            p.take_break()
+            print("\n1. Doom Scrolling \n2. Flappy Flap\n3. Back")
+            action = input(">> ")
+            
+            if action == "1":
+                player.take_break()
+            elif action == "2":
+                player.flappy_flap_best_score = Flappy_flap.play(player, player.flappy_flap_best_score)
+                
+            # else, be it 3 or ztherz453, the program goes back
 
         elif act == "3":
-            if not p.inventory:
+            if not player.inventory:
                 print("No items.")
             else:
-                for i, x in enumerate(p.inventory):
+                for i, x in enumerate(player.inventory):
                     print(f"{i+1}. {x}")
                 print("Type 'C' to combine top 2 items")
-                ch = input("Choice: ").upper()
+                item_choice = input("Choice: ").upper()
 
                 # Input validation for items
-                if ch.isdigit():
-                    idx = int(ch) - 1
-                    if 0 <= idx < len(p.inventory):
-                        p.use_item(p.inventory[idx])
-                elif ch == "C" and len(p.inventory) >= 2:
-                    i1 = p.inventory.pop(0)
-                    i2 = p.inventory.pop(0)
-                    p.inventory.append(i1 + i2)  # Operator overloading usage
+                if item_choice.isdigit():
+                    idx = int(item_choice) - 1
+                    if 0 <= idx < len(player.inventory):
+                        player.use_item(player.inventory[idx])
+                elif item_choice == "C" and len(player.inventory) >= 2:
+                    i1 = player.inventory.pop(0)
+                    i2 = player.inventory.pop(0)
+                    player.inventory.append(i1 + i2)  # Operator overloading usage
                     print("Crafted bundle!")
 
         elif act == "4":
-            SystemAdmin.save_game(p)
+            if os.path.exists(SystemAdmin.filename):
+                print("Already existing game file, do you want to override it? (y/n)")
+                choice = input("> ").lower().strip()  # input validation for string
+                if choice == "y":
+                    SystemAdmin.save_game(player)
+                else:
+                    print(">>> Game closed.")           
             break
 
 
